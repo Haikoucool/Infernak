@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Infernak's Lair</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      background: #222;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="480" height="320"></canvas>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const player = { x: 240, y: 160, size: 16, color: "lime", speed: 2, hp: 100 };
+    const keys = {};
+    const crystals = [
+      { x: 50, y: 50, hp: 30 },
+      { x: 430, y: 50, hp: 30 },
+      { x: 50, y: 270, hp: 30 },
+      { x: 430, y: 270, hp: 30 }
+    ];
+    const fireballs = [];
+    let score = 0;
+
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    function movePlayer() {
+      if (keys["ArrowUp"]) player.y -= player.speed;
+      if (keys["ArrowDown"]) player.y += player.speed;
+      if (keys["ArrowLeft"]) player.x -= player.speed;
+      if (keys["ArrowRight"]) player.x += player.speed;
+
+      player.x = Math.max(0, Math.min(canvas.width, player.x));
+      player.y = Math.max(0, Math.min(canvas.height, player.y));
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x - 8, player.y - 8, 16, 16);
+    }
+
+    function spawnFireball() {
+      const angle = Math.random() * Math.PI * 2;
+      fireballs.push({
+        x: 240,
+        y: 160,
+        dx: Math.cos(angle) * 2,
+        dy: Math.sin(angle) * 2
+      });
+    }
+
+    function updateFireballs() {
+      for (let f of fireballs) {
+        f.x += f.dx;
+        f.y += f.dy;
+
+        if (Math.hypot(player.x - f.x, player.y - f.y) < 10) {
+          player.hp -= 10;
+          f.hit = true;
+        }
+      }
+      for (let i = fireballs.length - 1; i >= 0; i--) {
+        if (fireballs[i].hit || fireballs[i].x < 0 || fireballs[i].x > canvas.width || fireballs[i].y < 0 || fireballs[i].y > canvas.height) {
+          fireballs.splice(i, 1);
+        }
+      }
+    }
+
+    function drawFireballs() {
+      ctx.fillStyle = "orange";
+      for (let f of fireballs) {
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawCrystals() {
+      ctx.fillStyle = "cyan";
+      for (let c of crystals) {
+        if (c.hp > 0) ctx.fillRect(c.x - 10, c.y - 10, 20, 20);
+      }
+    }
+
+    function attackCrystals() {
+      for (let c of crystals) {
+        if (c.hp > 0 && Math.hypot(player.x - c.x, player.y - c.y) < 20) {
+          c.hp -= 0.5;
+          if (c.hp <= 0) score++;
+        }
+      }
+    }
+
+    function drawUI() {
+      ctx.fillStyle = "white";
+      ctx.font = "14px Arial";
+      ctx.fillText("HP: " + player.hp, 10, 20);
+      ctx.fillText("Crystals: " + score + "/4", 10, 40);
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      movePlayer();
+      updateFireballs();
+      attackCrystals();
+      drawPlayer();
+      drawFireballs();
+      drawCrystals();
+      drawUI();
+
+      if (Math.random() < 0.03) spawnFireball();
+
+      if (player.hp <= 0) {
+        ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("GAME OVER", 140, 160);
+        return;
+      }
+
+      if (score >= 4) {
+        ctx.fillStyle = "lime";
+        ctx.font = "30px Arial";
+        ctx.fillText("VICTORY!", 160, 160);
+        return;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
